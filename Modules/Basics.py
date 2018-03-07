@@ -49,7 +49,7 @@ def scoreTest(ensemble, weights, features, cut, name):
 	testaData['pred_class'] = ensemblePredict(inputPipe.transform(testData[features].values.astype('float32')), ensemble, weights)    	
 
 	testData['Class'] = 'b'
-	testData.loc[testData.pred_class >= 0.cut, 'Class'] = 's'
+	testData.loc[testData.pred_class >= cut, 'Class'] = 's'
 
 	testData.sort_values(by=['pred_class'], inplace=True)
 	testData['RankOrder']=range(1, len(testData)+1)
