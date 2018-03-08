@@ -42,8 +42,8 @@ def amsScan(inData):
         if ams[-1] > best[1]:
             best = [row['pred_class'], ams[-1]]
     print best
-    valData['ams'] = ams
-    sns.regplot(valData['pred_class'], valData['ams'])
+    inData['ams'] = ams
+    sns.regplot(inData['pred_class'], inData['ams'])
 
 def scoreTest(ensemble, weights, features, cut, name):
     testData = pandas.read_csv('../Data/test.csv')
