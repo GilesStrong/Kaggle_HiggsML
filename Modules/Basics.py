@@ -13,6 +13,7 @@ sns.set_style("white")
 
 from ML_Tools.Plotting_And_Evaluation.Plotters import *
 from ML_Tools.General.Misc_Functions import *
+from ML_Tools.General.Ensemble_Functions import ensemblePredict
 
 dirLoc = "../Data/"
 
@@ -32,27 +33,30 @@ def AMS(s, b):
         return math.sqrt(radicand)
 
 
-def amsScan(inData, res=0.0001):
+def amsScan(inData):
     best = [0,-1]
-    for i in np.linspace(0.,1.,1./res):
-        ams = AMS(np.sum(inData.loc[(inData['pred_class'] >= i) & sigVal, 'gen_weight']),
-                  np.sum(inData.loc[(inData['pred_class'] >= i) & bkgVal, 'gen_weight']))
-        if ams > best[1]:
-            best = [i, ams]
+    ams = []
+    for index, row in inData.iterrows():
+        ams.append(AMS(np.sum(inData.loc[(inData['pred_class'] >= row['pred_class']) & (inData['gen_target'] == 1), 'gen_weight']),
+                  np.sum(inData.loc[(inData['pred_class'] >= row['pred_class']) & (inData['gen_target'] == 0), 'gen_weight'])))
+        if ams[-1] > best[1]:
+            best = [row['pred_class'], ams[-1]]
     print best
+    valData['ams'] = ams
+    sns.regplot(valData['pred_class'], valData['ams'])
 
 def scoreTest(ensemble, weights, features, cut, name):
-	testData = pandas.read_csv('../Data/test.csv')
-	with open(dirLoc + 'inputPipe.pkl', 'r') as fin:
-    	inputPipe = pickle.load(fin)
+    testData = pandas.read_csv('../Data/test.csv')
+    with open(dirLoc + 'inputPipe.pkl', 'r') as fin:
+        inputPipe = pickle.load(fin)
 
-	testaData['pred_class'] = ensemblePredict(inputPipe.transform(testData[features].values.astype('float32')), ensemble, weights)    	
+    testData['pred_class'] = ensemblePredict(inputPipe.transform(testData[features].values.astype('float32')), ensemble, weights)    	
 
-	testData['Class'] = 'b'
-	testData.loc[testData.pred_class >= cut, 'Class'] = 's'
+    testData['Class'] = 'b'
+    testData.loc[testData.pred_class >= cut, 'Class'] = 's'
 
-	testData.sort_values(by=['pred_class'], inplace=True)
-	testData['RankOrder']=range(1, len(testData)+1)
-	testData.sort_values(by=['EventId'], inplace=True)
+    testData.sort_values(by=['pred_class'], inplace=True)
+    testData['RankOrder']=range(1, len(testData)+1)
+    testData.sort_values(by=['EventId'], inplace=True)
 
-	testData.to_csv(dirLoc + name + '_test.csv', columns=['EventId', 'RankOrder', 'Class'], index=False)
+    testData.to_csv(dirLoc + name + '_test.csv', columns=['EventId', 'RankOrder', 'Class'], index=False)
