@@ -42,21 +42,25 @@ def amsScan(inData):
         if ams[-1] > best[1]:
             best = [row['pred_class'], ams[-1]]
     print best
-    inData['ams'] = ams
-    sns.regplot(inData['pred_class'], inData['ams'])
+    return ams
 
-def scoreTest(ensemble, weights, features, cut, name):
-    testData = pandas.read_csv('../Data/test.csv')
-    with open(dirLoc + 'inputPipe.pkl', 'r') as fin:
-        inputPipe = pickle.load(fin)
+def scoreTest(ensemble, weights):
+    testData = h5py.File(dirLoc + 'testing.hdf5', "r+")
+    batchEnsemblePredict(ensemble, weights, testData, ensembleSize=10, verbose=1)
 
-    testData['pred_class'] = ensemblePredict(inputPipe.transform(testData[features].values.astype('float32')), ensemble, weights)    	
+def saveTest(cut, name):
+    testData = h5py.File(dirLoc + 'testing.hdf5', "r+")
+    
+    data = pandas.DataFrame()
+    data['EventId'] = getFeature('EventId', testData)
+    data['pred_class'] = getFeature('pred', testData)
+    
+    data['Class'] = 'b'
+    data.loc[data.pred_class >= cut, 'Class'] = 's'
 
-    testData['Class'] = 'b'
-    testData.loc[testData.pred_class >= cut, 'Class'] = 's'
+    data.sort_values(by=['pred_class'], inplace=True)
+    data['RankOrder']=range(1, len(data)+1)
+    data.sort_values(by=['EventId'], inplace=True)
 
-    testData.sort_values(by=['pred_class'], inplace=True)
-    testData['RankOrder']=range(1, len(testData)+1)
-    testData.sort_values(by=['EventId'], inplace=True)
-
-    testData.to_csv(dirLoc + name + '_test.csv', columns=['EventId', 'RankOrder', 'Class'], index=False)
+    print dirLoc + name + '_test.csv'
+    data.to_csv(dirLoc + name + '_test.csv', columns=['EventId', 'RankOrder', 'Class'], index=False)
