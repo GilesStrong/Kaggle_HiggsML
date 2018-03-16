@@ -30,30 +30,31 @@ from Class_Features import *
 
 def getClassifier(version=None, nIn=None, compileArgs=None, nOut=1):
     model = Sequential()
-    depth = None
-    width = None
 
-    if version == "modelRelu":
+    if 'depth' in compileArgs:
+        depth = compileArgs['depth']
+    else:
         depth = 3
+    if 'width' in compileArgs:
+        width = compileArgs['width']
+    else:
         width = 100
+
+    if "modelRelu" in version:
         model.add(Dense(width, input_dim=nIn, kernel_initializer='he_normal'))
         model.add(Activation('relu'))
         for i in range(depth):
             model.add(Dense(width, kernel_initializer='he_normal'))
             model.add(Activation('relu'))
 
-    elif version == "modelSelu":
-        depth = 3
-        width = 100
+    elif "modelSelu" in version:
         model.add(Dense(width, input_dim=nIn, kernel_initializer='VarianceScaling'))
         model.add(Activation('selu'))
         for i in range(depth):
             model.add(Dense(width, kernel_initializer='VarianceScaling'))
             model.add(Activation('selu'))
 
-    elif version == "modelSwish":
-        depth = 3
-        width = 100
+    elif "modelSwish" in version:
         model.add(Dense(width, input_dim=nIn, kernel_initializer='he_normal'))
         model.add(Activation('swish'))
         for i in range(depth):
