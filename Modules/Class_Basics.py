@@ -7,7 +7,7 @@ from sklearn.decomposition import PCA
 from sklearn.metrics import roc_auc_score, roc_curve
 
 from keras.models import Sequential, model_from_json, load_model
-from keras.layers import Dense, Activation, AlphaDropout, Dropout
+from keras.layers import Dense, Activation, AlphaDropout, Dropout, BatchNormalization
 from keras.optimizers import Adam
 from keras.models import Sequential
 
