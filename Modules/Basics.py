@@ -14,7 +14,7 @@ sns.set_style("white")
 from ML_Tools.Plotting_And_Evaluation.Plotters import *
 from ML_Tools.General.Misc_Functions import *
 from ML_Tools.General.Ensemble_Functions import ensemblePredict
-from ML_Tools.General.Batch_Train import getFeature
+from ML_Tools.General.Batch_Train import getFeature, batchEnsemblePredict
 
 from sklearn.model_selection import StratifiedKFold
 
