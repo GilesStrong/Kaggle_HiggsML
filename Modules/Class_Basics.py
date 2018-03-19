@@ -7,7 +7,7 @@ from sklearn.decomposition import PCA
 from sklearn.metrics import roc_auc_score, roc_curve
 
 from keras.models import Sequential, model_from_json, load_model
-from keras.layers import Dense, Activation
+from keras.layers import Dense, Activation, AlphaDropout, Dropout
 from keras.optimizers import Adam
 from keras.models import Sequential
 
@@ -39,6 +39,14 @@ def getClassifier(version=None, nIn=None, compileArgs=None, nOut=1):
         width = compileArgs['width']
     else:
         width = 100
+    if 'do' in compileArgs:
+        do = compileArgs['do']
+    else:
+        do = False
+    if 'bn' in compileArgs:
+        bn = compileArgs['do']
+    else:
+        bn = False
 
     if "modelRelu" in version:
         model.add(Dense(width, input_dim=nIn, kernel_initializer='he_normal'))
@@ -50,16 +58,24 @@ def getClassifier(version=None, nIn=None, compileArgs=None, nOut=1):
     elif "modelSelu" in version:
         model.add(Dense(width, input_dim=nIn, kernel_initializer='VarianceScaling'))
         model.add(Activation('selu'))
+        if do: model.add(AlphaDropout(do))
         for i in range(depth):
             model.add(Dense(width, kernel_initializer='VarianceScaling'))
             model.add(Activation('selu'))
+            if do: model.add(AlphaDropout(do))
 
     elif "modelSwish" in version:
         model.add(Dense(width, input_dim=nIn, kernel_initializer='he_normal'))
+        if bn == 'pre': model.add(BatchNormalization())
         model.add(Activation('swish'))
+        if bn == 'post': model.add(BatchNormalization())
+        if do: model.add(Dropout(do))
         for i in range(depth):
             model.add(Dense(width, kernel_initializer='he_normal'))
+            if bn == 'pre': model.add(BatchNormalization())
             model.add(Activation('swish'))
+            if bn == 'post': model.add(BatchNormalization())
+            if do: Dropout(do)
             
     if nOut == 1:
         model.add(Dense(1, activation='sigmoid', kernel_initializer='glorot_normal'))
