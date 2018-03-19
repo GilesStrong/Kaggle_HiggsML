@@ -44,7 +44,7 @@ def getClassifier(version=None, nIn=None, compileArgs=None, nOut=1):
     else:
         do = False
     if 'bn' in compileArgs:
-        bn = compileArgs['do']
+        bn = compileArgs['bn']
     else:
         bn = False
 
