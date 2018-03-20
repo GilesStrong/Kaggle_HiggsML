@@ -25,10 +25,11 @@ from ML_Tools.General.Ensemble_Functions import *
 from ML_Tools.Plotting_And_Evaluation.Bootstrap import mpRun
 from ML_Tools.General.Training import *
 from ML_Tools.General.Batch_Train import *
+from ML_Tools.General.Models import getModel
 
 from Class_Features import *
 
-def getClassifier(version=None, nIn=None, compileArgs=None, nOut=1):
+'''def getClassifier(version, nIn, compileArgs, mode, nOut=1):
     model = Sequential()
 
     if 'depth' in compileArgs:
@@ -50,10 +51,16 @@ def getClassifier(version=None, nIn=None, compileArgs=None, nOut=1):
 
     if "modelRelu" in version:
         model.add(Dense(width, input_dim=nIn, kernel_initializer='he_normal'))
+        if bn == 'pre': model.add(BatchNormalization())
         model.add(Activation('relu'))
+        if bn == 'post': model.add(BatchNormalization())
+        if do: model.add(Dropout(do))
         for i in range(depth):
             model.add(Dense(width, kernel_initializer='he_normal'))
+            if bn == 'pre': model.add(BatchNormalization())
             model.add(Activation('relu'))
+            if bn == 'post': model.add(BatchNormalization())
+            if do: Dropout(do)
 
     elif "modelSelu" in version:
         model.add(Dense(width, input_dim=nIn, kernel_initializer='VarianceScaling'))
@@ -76,15 +83,19 @@ def getClassifier(version=None, nIn=None, compileArgs=None, nOut=1):
             model.add(Activation('swish'))
             if bn == 'post': model.add(BatchNormalization())
             if do: Dropout(do)
-            
-    if nOut == 1:
-        model.add(Dense(1, activation='sigmoid', kernel_initializer='glorot_normal'))
-    else:
-        model.add(Dense(nOut, activation='softmax', kernel_initializer='glorot_normal'))
+    
+    if 'class' in mode:        
+        if nOut == 1:
+            model.add(Dense(1, activation='sigmoid', kernel_initializer='glorot_normal'))
+        else:
+            model.add(Dense(nOut, activation='softmax', kernel_initializer='glorot_normal'))
+
+    elif 'regress' in mode:
+        model.add(Dense(nOut, activation='linear', kernel_initializer='glorot_normal'))
 
     if 'lr' not in compileArgs: compileArgs['lr'] = 0.001
     if compileArgs['optimizer'] == 'adam':
         optimiser = Adam(lr=compileArgs['lr'], beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
         
     model.compile(loss=compileArgs['loss'], optimizer=optimiser)
-    return model
+    return model'''
