@@ -93,3 +93,4 @@ def convertToDF(datafile, columns={'gen_target', 'gen_weight', 'pred_class'}, nL
     data['pred_class'] = getFeature('pred', datafile, nLoad)
     print len(data), "candidates loaded"
     return data
+
