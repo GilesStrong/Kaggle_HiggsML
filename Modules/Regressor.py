@@ -9,6 +9,7 @@ from six.moves import cPickle as pickle
 import glob
 import types
 import numpy as np
+import os
 
 class Regressor():
     def __init__(self):
