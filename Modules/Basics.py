@@ -22,6 +22,8 @@ from sklearn.model_selection import StratifiedKFold
 
 dirLoc = "../Data/"
 
+wFactor = 250000/50000
+
 def AMS(s, b):
     """ Approximate Median Significance defined as:
         AMS = sqrt(
@@ -42,11 +44,8 @@ def amsScan(inData, scale=False):
     best = [0,-1]
     ams = []
     for index, row in inData.iterrows():
-        s = np.sum(inData.loc[(inData['pred_class'] >= row['pred_class']) & (inData['gen_target'] == 1), 'gen_weight'])
-        b = np.sum(inData.loc[(inData['pred_class'] >= row['pred_class']) & (inData['gen_target'] == 0), 'gen_weight'])
-        if scale:
-            s *= scale[0]/np.sum(inData[(inData['gen_target'] == 1)]['gen_weight'])
-            b *= scale[1]/np.sum(inData[(inData['gen_target'] == 0)]['gen_weight'])
+        s = wFactor*np.sum(inData.loc[(inData['pred_class'] >= row['pred_class']) & (inData['gen_target'] == 1), 'gen_weight'])
+        b = wFactor*np.sum(inData.loc[(inData['pred_class'] >= row['pred_class']) & (inData['gen_target'] == 0), 'gen_weight'])
         ams.append(AMS(s, b))
         if ams[-1] > best[1]:
             best = [row['pred_class'], ams[-1]]
