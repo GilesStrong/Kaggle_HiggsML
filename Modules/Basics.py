@@ -44,8 +44,8 @@ def amsScan(inData, scale=False):
     best = [0,-1]
     ams = []
     for index, row in inData.iterrows():
-        s = wFactor*np.sum(inData.loc[(inData['pred_class'] >= row['pred_class']) & (inData['gen_target'] == 1), 'gen_weight'])
-        b = wFactor*np.sum(inData.loc[(inData['pred_class'] >= row['pred_class']) & (inData['gen_target'] == 0), 'gen_weight'])
+        s = scale[0]*np.sum(inData.loc[(inData['pred_class'] >= row['pred_class']) & (inData['gen_target'] == 1), 'gen_weight'])
+        b = scale[1]*np.sum(inData.loc[(inData['pred_class'] >= row['pred_class']) & (inData['gen_target'] == 0), 'gen_weight'])
         ams.append(AMS(s, b))
         if ams[-1] > best[1]:
             best = [row['pred_class'], ams[-1]]
@@ -63,6 +63,30 @@ def foldAMSScan(inData, N=10):
                                                                                           np.sum(inData.iloc[test][inData.gen_target == 0]['gen_weight']))
     print "Mean cut", np.average([x[0] for x in bests], weights=[1/x[1] for x in bests]), "mean AMS", np.average([x[1] for x in bests], weights=[1/x[1] for x in bests])
     return bests
+
+def amsScanQuick(inData, wFactor=250000./50000.):
+    s = np.sum(inData.loc[inData['gen_target'] == 1, 'gen_weight'])
+    b = np.sum(inData.loc[inData['gen_target'] == 0, 'gen_weight'])
+    tIIs = inData['pred_class'].argsort()
+    amss = np.empty([len(tIIs)])
+    
+    amsMax = 0
+    threshold = 0.0
+
+    for tI in range(len(tIIs)):
+        # don't forget to renormalize the weights to the same sum 
+        # as in the complete training set
+        amss[tI] = AMS(max(0,s * wFactor),max(0,b * wFactor))
+        if amss[tI] > amsMax:
+            amsMax = amss[tI]
+            threshold = inData['pred_class'].values[tIIs[tI]]
+            #print tI,threshold
+        if inData.loc[:, 'gen_target'].values[tIIs[tI]]:
+            s -= inData.loc[:, 'gen_weight'].values[tIIs[tI]]
+        else:
+            b -= inData.loc[:, 'gen_weight'].values[tIIs[tI]]
+    print amsMax, threshold
+    return amsMax, threshold
 
 def scoreTest(ensemble, weights):
     testData = h5py.File(dirLoc + 'testing.hdf5', "r+")
@@ -85,11 +109,11 @@ def saveTest(cut, name):
     print dirLoc + name + '_test.csv'
     data.to_csv(dirLoc + name + '_test.csv', columns=['EventId', 'RankOrder', 'Class'], index=False)
 
-def convertToDF(datafile, columns={'gen_target', 'gen_weight', 'pred_class'}, nLoad=-1):
+def convertToDF(datafile, columns={'gen_target', 'gen_weight', 'pred_class'}, nLoad=-1, setFold=-1):
     data = pandas.DataFrame()
-    data['gen_target'] = getFeature('targets', datafile, nLoad)
-    data['gen_weight'] = getFeature('weights', datafile, nLoad)
-    data['pred_class'] = getFeature('pred', datafile, nLoad)
+    data['gen_target'] = getFeature('targets', datafile, nLoad, setFold=setFold)
+    data['gen_weight'] = getFeature('weights', datafile, nLoad, setFold=setFold)
+    data['pred_class'] = getFeature('pred', datafile, nLoad, setFold=setFold)
     print len(data), "candidates loaded"
     return data
 
