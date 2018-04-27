@@ -1,5 +1,5 @@
 # Kaggle_HiggsML
-Repo for my solution to the [HiggsML Kagle challenge](https://www.kaggle.com/c/higgs-boson/).
+Repo for my solution to the [HiggsML Kaggle challenge](https://www.kaggle.com/c/higgs-boson/) solution.
 
 ## Installing
 Developed in Python 2.7. Requires methods collected in [ML_Tools](https://github.com/GilesStrong/ML_Tools). Download, checkout relevent tag, and add base directory to PYTHONPATH.
