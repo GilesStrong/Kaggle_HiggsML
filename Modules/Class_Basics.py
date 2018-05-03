@@ -29,73 +29,159 @@ from ML_Tools.General.Models import getModel
 
 from Class_Features import *
 
-'''def getClassifier(version, nIn, compileArgs, mode, nOut=1):
-    model = Sequential()
-
-    if 'depth' in compileArgs:
-        depth = compileArgs['depth']
-    else:
-        depth = 3
-    if 'width' in compileArgs:
-        width = compileArgs['width']
-    else:
-        width = 100
-    if 'do' in compileArgs:
-        do = compileArgs['do']
-    else:
-        do = False
-    if 'bn' in compileArgs:
-        bn = compileArgs['bn']
-    else:
-        bn = False
-
-    if "modelRelu" in version:
-        model.add(Dense(width, input_dim=nIn, kernel_initializer='he_normal'))
-        if bn == 'pre': model.add(BatchNormalization())
-        model.add(Activation('relu'))
-        if bn == 'post': model.add(BatchNormalization())
-        if do: model.add(Dropout(do))
-        for i in range(depth):
-            model.add(Dense(width, kernel_initializer='he_normal'))
-            if bn == 'pre': model.add(BatchNormalization())
-            model.add(Activation('relu'))
-            if bn == 'post': model.add(BatchNormalization())
-            if do: Dropout(do)
-
-    elif "modelSelu" in version:
-        model.add(Dense(width, input_dim=nIn, kernel_initializer='VarianceScaling'))
-        model.add(Activation('selu'))
-        if do: model.add(AlphaDropout(do))
-        for i in range(depth):
-            model.add(Dense(width, kernel_initializer='VarianceScaling'))
-            model.add(Activation('selu'))
-            if do: model.add(AlphaDropout(do))
-
-    elif "modelSwish" in version:
-        model.add(Dense(width, input_dim=nIn, kernel_initializer='he_normal'))
-        if bn == 'pre': model.add(BatchNormalization())
-        model.add(Activation('swish'))
-        if bn == 'post': model.add(BatchNormalization())
-        if do: model.add(Dropout(do))
-        for i in range(depth):
-            model.add(Dense(width, kernel_initializer='he_normal'))
-            if bn == 'pre': model.add(BatchNormalization())
-            model.add(Activation('swish'))
-            if bn == 'post': model.add(BatchNormalization())
-            if do: Dropout(do)
-    
-    if 'class' in mode:        
-        if nOut == 1:
-            model.add(Dense(1, activation='sigmoid', kernel_initializer='glorot_normal'))
-        else:
-            model.add(Dense(nOut, activation='softmax', kernel_initializer='glorot_normal'))
-
-    elif 'regress' in mode:
-        model.add(Dense(nOut, activation='linear', kernel_initializer='glorot_normal'))
-
-    if 'lr' not in compileArgs: compileArgs['lr'] = 0.001
-    if compileArgs['optimizer'] == 'adam':
-        optimiser = Adam(lr=compileArgs['lr'], beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
+class RotationReflectionBatch(BatchYielder):
+    def __init__(self, header, datafile=None, inputPipe=None,
+                 rotate=True, reflect=True, augRotMult=4,
+                 trainTimeAug=True, testTimeAug=True):
+        self.header = header
+        self.rotateAug = rotate
+        self.reflectAug = reflect
+        self.augmented = True
+        self.augRotMult = augRotMult
         
-    model.compile(loss=compileArgs['loss'], optimizer=optimiser)
-    return model'''
+        if self.rotateAug and not self.reflectAug:
+            self.augMult = self.augRotMult
+            
+        elif not self.rotateAug and self.reflectAug:
+            self.reflectAxes = ['_px', '_py', '_pz']
+            self.augMult = 8
+            
+        elif not self.rotateAug and not self.reflectAug:
+            self.augmented = False
+            trainTimeAug = False
+            testTimeAug = False
+            self.augMult = 0
+            print 'No augmentation specified!'
+            inputPipe = None
+            self.getTestBatch = self.getBatch
+            
+        else: #reflect and rotate
+            self.reflectAxes = ['_px', '_pz']
+            self.augMult = self.augRotMult*4
+            
+        self.trainTimeAug = trainTimeAug
+        self.testTimeAug = testTimeAug
+        self.inputPipe = inputPipe
+        
+        if not isinstance(datafile, types.NoneType):
+            self.addSource(datafile)
+    
+    def rotate(self, inData, vectors):
+        for vector in vectors:
+            if 'jet_leading' in vector:
+                cut = inData.PRI_jet_num >= 0.9
+                inData.loc[cut, vector + '_px'] = inData.loc[cut, vector + '_px']*np.cos(inData.loc[cut, 'aug_angle'])-inData.loc[:, vector + '_py']*np.sin(inData.loc[cut, 'aug_angle'])
+                inData.loc[cut, vector + '_py'] = inData.loc[cut, vector + '_py']*np.cos(inData.loc[cut, 'aug_angle'])+inData.loc[:, vector + '_px']*np.sin(inData.loc[cut, 'aug_angle'])
+            elif 'jet_subleading' in vector:
+                cut = inData.PRI_jet_num >= 1.9
+                inData.loc[cut, vector + '_px'] = inData.loc[cut, vector + '_px']*np.cos(inData.loc[cut, 'aug_angle'])-inData.loc[:, vector + '_py']*np.sin(inData.loc[cut, 'aug_angle'])
+                inData.loc[cut, vector + '_py'] = inData.loc[cut, vector + '_py']*np.cos(inData.loc[cut, 'aug_angle'])+inData.loc[:, vector + '_px']*np.sin(inData.loc[cut, 'aug_angle'])
+            else:
+                inData.loc[:, vector + '_px'] = inData.loc[:, vector + '_px']*np.cos(inData.loc[:, 'aug_angle'])-inData.loc[:, vector + '_py']*np.sin(inData.loc[:, 'aug_angle'])
+                inData.loc[:, vector + '_py'] = inData.loc[:, vector + '_py']*np.cos(inData.loc[:, 'aug_angle'])+inData.loc[:, vector + '_px']*np.sin(inData.loc[:, 'aug_angle'])
+    
+    def reflect(self, inData, vectors):
+        for vector in vectors:
+            for coord in self.reflectAxes:
+                try:
+                    cut = (inData['aug' + coord] == 1)
+                    if 'jet_leading' in vector:
+                        cut = cut & (inData.PRI_jet_num >= 0.9)
+                    elif 'jet_subleading' in vector:
+                        cut = cut & (inData.PRI_jet_num >= 1.9)
+                    inData.loc[cut, vector + coord] = -inData.loc[cut, vector + coord]
+                except KeyError:
+                    pass
+            
+    def getBatch(self, index, datafile=None):
+        if isinstance(datafile, types.NoneType):
+            datafile = self.source
+            
+        index = str(index)
+        weights = None
+        targets = None
+        if 'fold_' + index + '/weights' in datafile:
+            weights = np.array(datafile['fold_' + index + '/weights'])
+        if 'fold_' + index + '/targets' in datafile:
+            targets = np.array(datafile['fold_' + index + '/targets'])
+            
+        if not self.augmented:
+            return {'inputs':np.array(datafile['fold_' + index + '/inputs']),
+                    'targets':targets,
+                    'weights':weights}
+
+        if isinstance(self.inputPipe, types.NoneType):
+            inputs = pandas.DataFrame(np.array(datafile['fold_' + index + '/inputs']), columns=self.header)
+        else:
+            inputs = pandas.DataFrame(self.inputPipe.inverse_transform(np.array(datafile['fold_' + index + '/inputs'])), columns=self.header)            
+        
+        vectors = [x[:-3] for x in inputs.columns if '_px' in x]
+        if self.rotateAug:
+            inputs['aug_angle'] = 2*np.pi*np.random.random(size=len(inputs))
+            self.rotate(inputs, vectors)
+            
+        if self.reflectAug:
+            for coord in self.reflectAxes:
+                inputs['aug' + coord] = np.random.randint(0, 2, size=len(inputs))
+            self.reflect(inputs, vectors)
+            
+        if isinstance(self.inputPipe, types.NoneType):
+            inputs = inputs[self.header].values
+        else:
+            inputs = self.inputPipe.transform(inputs[self.header].values)
+        
+        return {'inputs':inputs,
+                'targets':targets,
+                'weights':weights}
+    
+    def getTestBatch(self, index, augIndex, datafile=None):
+        if augIndex >= self.augMult:
+            print "Invalid augmentation index passed", augIndex
+            return -1
+        
+        if isinstance(datafile, types.NoneType):
+            datafile = self.source
+            
+        index = str(index)
+        weights = None
+        targets = None
+        if 'fold_' + index + '/weights' in datafile:
+            weights = np.array(datafile['fold_' + index + '/weights'])
+        if 'fold_' + index + '/targets' in datafile:
+            targets = np.array(datafile['fold_' + index + '/targets'])
+            
+        if isinstance(self.inputPipe, types.NoneType):
+            inputs = pandas.DataFrame(np.array(datafile['fold_' + index + '/inputs']), columns=self.header)
+        else:
+            inputs = pandas.DataFrame(self.inputPipe.inverse_transform(np.array(datafile['fold_' + index + '/inputs'])), columns=self.header)            
+            
+        if self.reflectAug and self.rotateAug:
+            rotIndex = augIndex%self.augRotMult
+            refIndex = '{0:02b}'.format(int(augIndex/4))
+            vectors = [x[:-3] for x in inputs.columns if '_px' in x]
+            inputs['aug_angle'] = np.linspace(0, 2*np.pi, (self.augRotMult)+1)[rotIndex]
+            for i, coord in enumerate(self.reflectAxes):
+                inputs['aug' + coord] = int(refIndex[i])
+            self.rotate(inputs, vectors)
+            self.reflect(inputs, vectors)
+            
+        elif self.reflectAug:
+            refIndex = '{0:03b}'.format(int(augIndex))
+            vectors = [x[:-3] for x in inputs.columns if '_px' in x]
+            for i, coord in enumerate(self.reflectAxes):
+                inputs['aug' + coord] = int(refIndex[i])
+            self.reflect(inputs, vectors)
+            
+        else:
+            vectors = [x[:-3] for x in inputs.columns if '_px' in x]
+            inputs['aug_angle'] = np.linspace(0, 2*np.pi, (self.augRotMult)+1)[augIndex]
+            self.rotate(inputs, vectors)
+            
+        if isinstance(self.inputPipe, types.NoneType):
+            inputs = inputs[self.header].values
+        else:
+            inputs = inputPipe.transform(inputs[self.header].values)
+
+        return {'inputs':inputs,
+                'targets':targets,
+                'weights':weights}
