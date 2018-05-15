@@ -17,7 +17,7 @@ import types
 import numpy as np
 import pandas
 
-from rep.estimators import XGBoostClassifier
+#from rep.estimators import XGBoostClassifier
 from xgboost import XGBClassifier
 
 from ML_Tools.General.PreProc import *
@@ -27,7 +27,7 @@ from ML_Tools.General.Training import *
 from ML_Tools.General.Batch_Train import *
 from ML_Tools.General.Models import getModel
 
-from Class_Features import *
+from Modules.Class_Features import *
 
 class RotationReflectionBatch(BatchYielder):
     def __init__(self, header, datafile=None, inputPipe=None,
@@ -51,7 +51,7 @@ class RotationReflectionBatch(BatchYielder):
             trainTimeAug = False
             testTimeAug = False
             self.augMult = 0
-            print 'No augmentation specified!'
+            print ('No augmentation specified!')
             inputPipe = None
             self.getTestBatch = self.getBatch
             
@@ -63,7 +63,7 @@ class RotationReflectionBatch(BatchYielder):
         self.testTimeAug = testTimeAug
         self.inputPipe = inputPipe
         
-        if not isinstance(datafile, types.NoneType):
+        if not isinstance(datafile, type(None)):
             self.addSource(datafile)
     
     def rotate(self, inData, vectors):
@@ -94,7 +94,7 @@ class RotationReflectionBatch(BatchYielder):
                     pass
             
     def getBatch(self, index, datafile=None):
-        if isinstance(datafile, types.NoneType):
+        if isinstance(datafile, type(None)):
             datafile = self.source
             
         index = str(index)
@@ -110,7 +110,7 @@ class RotationReflectionBatch(BatchYielder):
                     'targets':targets,
                     'weights':weights}
 
-        if isinstance(self.inputPipe, types.NoneType):
+        if isinstance(self.inputPipe, type(None)):
             inputs = pandas.DataFrame(np.array(datafile['fold_' + index + '/inputs']), columns=self.header)
         else:
             inputs = pandas.DataFrame(self.inputPipe.inverse_transform(np.array(datafile['fold_' + index + '/inputs'])), columns=self.header)            
@@ -125,7 +125,7 @@ class RotationReflectionBatch(BatchYielder):
                 inputs['aug' + coord] = np.random.randint(0, 2, size=len(inputs))
             self.reflect(inputs, vectors)
             
-        if isinstance(self.inputPipe, types.NoneType):
+        if isinstance(self.inputPipe, type(None)):
             inputs = inputs[self.header].values
         else:
             inputs = self.inputPipe.transform(inputs[self.header].values)
@@ -136,10 +136,10 @@ class RotationReflectionBatch(BatchYielder):
     
     def getTestBatch(self, index, augIndex, datafile=None):
         if augIndex >= self.augMult:
-            print "Invalid augmentation index passed", augIndex
+            print ("Invalid augmentation index passed", augIndex)
             return -1
         
-        if isinstance(datafile, types.NoneType):
+        if isinstance(datafile, type(None)):
             datafile = self.source
             
         index = str(index)
@@ -150,7 +150,7 @@ class RotationReflectionBatch(BatchYielder):
         if 'fold_' + index + '/targets' in datafile:
             targets = np.array(datafile['fold_' + index + '/targets'])
             
-        if isinstance(self.inputPipe, types.NoneType):
+        if isinstance(self.inputPipe, type(None)):
             inputs = pandas.DataFrame(np.array(datafile['fold_' + index + '/inputs']), columns=self.header)
         else:
             inputs = pandas.DataFrame(self.inputPipe.inverse_transform(np.array(datafile['fold_' + index + '/inputs'])), columns=self.header)            
@@ -177,7 +177,7 @@ class RotationReflectionBatch(BatchYielder):
             inputs['aug_angle'] = np.linspace(0, 2*np.pi, (self.augRotMult)+1)[augIndex]
             self.rotate(inputs, vectors)
             
-        if isinstance(self.inputPipe, types.NoneType):
+        if isinstance(self.inputPipe, type(None)):
             inputs = inputs[self.header].values
         else:
             inputs = inputPipe.transform(inputs[self.header].values)
