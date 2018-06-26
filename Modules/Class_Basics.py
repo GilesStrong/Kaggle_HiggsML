@@ -26,6 +26,7 @@ from ML_Tools.Plotting_And_Evaluation.Bootstrap import mpRun
 from ML_Tools.General.Training import *
 from ML_Tools.General.Batch_Train import *
 from ML_Tools.General.Models import getModel
+from ML_Tools.General.BatchYielder import *
 
 from Modules.Class_Features import *
 
@@ -180,7 +181,7 @@ class RotationReflectionBatch(BatchYielder):
         if isinstance(self.inputPipe, type(None)):
             inputs = inputs[self.header].values
         else:
-            inputs = inputPipe.transform(inputs[self.header].values)
+            inputs = self.inputPipe.transform(inputs[self.header].values)
 
         return {'inputs':inputs,
                 'targets':targets,
